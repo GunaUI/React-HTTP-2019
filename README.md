@@ -1,68 +1,254 @@
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
-## Available Scripts
+## HTTP
+* Create a project with dummy post, NewPost and FullPost component.
+* For storing and retriving we are going to use some dummy data. Please refer [jsonplaceholder](https://jsonplaceholder.typicode.com/)
+* For sending ajax request we will be using some third party javascript library !!not sepcific to react [axios](https://www.npmjs.com/package/axios)
+* First install axios in our project
+```js
+    npm install axios --save
+```
+* Now where to use side effect (ie data change when server calls). yes we already see in previous module. the best place is "componentDidMount()".
+### GET
+* In blog container import axios and do asynchronous server call with transformed data as follows.
 
-In the project directory, you can run:
+```js
+import axios from 'axios';
 
-### `npm start`
+state = {
+    posts: [],
+    selectedPostId: null
+}
 
-Runs the app in the development mode.<br>
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+componentDidMount () {
+    axios.get( 'https://jsonplaceholder.typicode.com/posts' )
+        .then( response => {
+            const posts = response.data.slice(0, 4);
+            const updatedPosts = posts.map(post => {
+                return {
+                    ...post,
+                    author: 'Max'
+                }
+            });
+            this.setState({posts: updatedPosts});
+        } );
+}
+```
+* Now we have list of respose with Post Data . we have to render this data with dynamic post component with key, title, author props in blog container.
 
-The page will reload if you make edits.<br>
-You will also see any lint errors in the console.
+```js
+render () {
+        const posts = this.state.posts.map(post => {
+            return <Post 
+                key={post.id} 
+                title={post.title} 
+                author={post.author}
+            />;
+        });
 
-### `npm test`
+        return (
+            <div>
+                <section className="Posts">
+                    {posts}
+                </section>
+                <section>
+                    <FullPost />
+                </section>
+                <section>
+                    <NewPost />
+                </section>
+            </div>
+        );
+    }
+```
+* Then replace the static dummy data in Post component  with corresponsing props .
 
-Launches the test runner in the interactive watch mode.<br>
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Fetch and view Post based on selected post Id
+* Now add a handler (function) to select post onclick.
+* In Post.js
+```js
+const post = (props) => (
+    <article className="Post" onClick={props.postClicked}>
+        <h1>{props.title}</h1>
+        <div className="Info">
+            <div className="Author">{props.author}</div>
+        </div>
+    </article>
+);
+```
+* In Blog container
+```js
+const postContainer = this.state.posts.map(post => {
+    return <Post 
+        key={post.id} 
+        title={post.title} 
+        author={post.author}
+        postClicked={() => this.postSelectedHandler(post.id)} 
+    />;
+});
 
-### `npm run build`
+postSelectedHandler = (id) => {
+    this.setState({selectedPostId: id});
+}
 
-Builds the app for production to the `build` folder.<br>
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```
+* Once selected Post state ID updated pass selectedPostId to Fullpost component.
+```jsx
+<FullPost choosedId={this.state.selectedPostId} />
+```
+* Consume this choosedId post id in FullPost component and fetch single data object to load
+* First initialise the state with loaded Post as null. Then get data by id in componentDidUpdate().
+```js
+state = {
+        loadedPost: null
+    }
 
-The build is minified and the filenames include the hashes.<br>
-Your app is ready to be deployed!
+componentDidUpdate () {
+        if ( this.props.choosedId ) {
+            if ( !this.state.loadedPost || (this.state.loadedPost && this.state.loadedPost.id !== this.props.choosedId) ) {
+                axios.get( 'https://jsonplaceholder.typicode.com/posts/' + this.props.choosedId )
+                    .then( response => {
+                        // console.log(response);
+                        this.setState( { loadedPost: response.data } );
+                    } );
+            }
+        }
+    }
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+    render () {
+        let post = <p style={{ textAlign: 'center' }}>Please select a Post!</p>;
+        if ( this.props.choosedId ) {
+            post = <p style={{ textAlign: 'center' }}>Loading...!</p>;
+        }
+        if ( this.state.loadedPost ) {
+            post = (
+                <div className="FullPost">
+                    <h1>{this.state.loadedPost.title}</h1>
+                    <p>{this.state.loadedPost.content}</p>
+                    <div className="Edit">
+                        <button className="Delete">Delete</button>
+                    </div>
+                </div>
 
-### `npm run eject`
+            );
+        }
+        return post;
+    }
+```
+* Here used componentDidUpdate() hook why ? why not componentDidMount() ??
+* Because the fullpost component there from start , just we are going to update the existing component that is why we used componentDidUpdate to setState.
+* Here we check this.state.loadedPost before render because this is asyncronous call ,it might loaded later once got response. But jsx might render berfore we get async repsonse , so it's better to confirm loadedPost response before render JSX.
+* When you are setState inside the componentDidUpdate will it cause render the component again and that will cause componentDidUpdate load again. to avoid this check.
+```js
+componentDidUpdate () {
+        if ( this.props.choosedId ) {
+            if ( !this.state.loadedPost || (this.state.loadedPost && this.state.loadedPost.id !== this.props.choosedId) ) {
+                axios.get( 'https://jsonplaceholder.typicode.com/posts/' + this.props.choosedId )
+                    .then( response => {
+                        // console.log(response);
+                        this.setState( { loadedPost: response.data } );
+                    } );
+            }
+        }
+    }
+```
+### POST data to server.
+* Now using axios we are going to create a POST in NewPost Component.
+* As ususual create a state and handler to post data to the server.
+```js
+state = {
+    title: '',
+    content: '',
+    author: 'Max'
+}
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+postDataHandler = () => {
+    const data = {
+        title: this.state.title,
+        body: this.state.content,
+        author: this.state.author
+    };
+    axios.post('https://jsonplaceholder.typicode.com/posts', data)
+    .then(response => {
+        console.log(response);
+    });
+}
+```
+* Add a onlick button to call above handler.
+```html
+<button onClick={this.postDataHandler}>Add Post</button>
+```
+### DELETE post
+```js
+deletePostHandler = () => {
+        axios.delete('https://jsonplaceholder.typicode.com/posts/' + this.props.choosedId)
+            .then(response => {
+                console.log(response);
+            });
+    }
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+<button className="Delete" onClick={this.deletePostHandler}>Delete</button>
+```
+### Handling Errors Locally.
+* you could add catch block to your async call 
+```js
+componentDidMount () {
+        axios.get( 'https://jsonplaceholder.typicode.com/posts123' )
+            .then( response => {
+                const posts = response.data.slice(0, 4);
+                const updatedPosts = posts.map(post => {
+                    return {
+                        ...post,
+                        author: 'Max'
+                    }
+                });
+                this.setState({posts: updatedPosts});
+                
+            } ).catch(error =>{
+                console.log(error);
+                this.setState({error: true});
+            });
+    }
+```
+* based on the error state you could do some changes...
 
-Instead, it will copy all the configuration files and the transitive dependencies (Webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+### Interceptors to execute code Globally.
+* Now lets go to the index.js file, this is the file which runs App component.
+```js
+import axios from 'axios';
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+axios.defaults.baseURL = 'https://jsonplaceholder.typicode.com';
+axios.defaults.headers.common['Authorization'] = 'AUTH TOKEN';
+axios.defaults.headers.post['Content-Type'] = 'application/json';
 
-## Learn More
+axios.interceptors.request.use(request => {
+    console.log(request);
+    // Edit request config
+    return request;
+}, error => {
+    console.log(error);
+    return Promise.reject(error);
+});
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+axios.interceptors.response.use(response => {
+    console.log(response);
+    // Edit request config
+    return response;
+}, error => {
+    console.log(error);
+    return Promise.reject(error);
+});
 
-To learn React, check out the [React documentation](https://reactjs.org/).
 
-### Code Splitting
+```
+* If you may need to remove an interceptor later you can
+```js
+const myInterceptor = axios.interceptors.request.use(function () {/*...*/});
+axios.interceptors.request.eject(myInterceptor);
+```
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/code-splitting
 
-### Analyzing the Bundle Size
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size
 
-### Making a Progressive Web App
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app
 
-### Advanced Configuration
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/advanced-configuration
-
-### Deployment
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/deployment
-
-### `npm run build` fails to minify
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify
