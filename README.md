@@ -1,39 +1,51 @@
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
-### Navigating Programatically
-* Remove Link  in posts.
-* Navigating without link (alternate way).
-```jsx
-// this.props.history.push({pathname: '/posts/' + id});
-this.props.history.push( '/posts/' + id );
-```
-* push method allow us to push page on top of the stack of pages...
-
-### Adding information regarding active links.
+### Nested Route
+* Sometimes you also have a set up where you want to create a nested route. So where you want to load a certain component or where you want to render certain content inside of another component which is also loaded via routing.
 
 ```jsx
-<ul>
-    <li><NavLink  
-    to="/posts"
-    activeClassName="my-active"
-    activeStyle={{
-        color: '#fa923f',
-        textDecoration: 'underline'
-    }}
-    >Home</NavLink></li>
-    <li><NavLink to={{
-        pathname: '/new-post',
-        hash: '#submit',
-        search: '?quick-submit=true'
-    }}>New Post</NavLink></li>
-</ul>
-
-<Switch>
-    <Route path="/posts" exact component={Posts} />
-    <Route path="/new-post" component={NewPost} />
-    <Route path="/posts/:id" exact component={FullPost} />
-</Switch>
+return (
+            <div>
+                <section className="Posts">
+                    {posts}
+                </section>
+                <Route path="/posts/:id" exact component={FullPost} />
+            </div>
+        );
 ```
+* Here we are trying to load individual full post inside the list of posts component.
+* We can improve this with adding dynamic route path as below
+
+```jsx
+<Route path={this.props.match.url + '/:id'} exact component={FullPost} />
+```
+### Receive the URL param
+
+* Receive the URL params inside the component...
+
+```jsx
+this.props.match.params.id
+```
+
+### Redirecting request
+
+* here if we are in base URL slash("/) just redirect to the route "/posts"
+
+```jsx
+import { Route, NavLink, Switch, Redirect } from 'react-router-dom';
+....
+....
+<Redirect from="/" to="/posts" />
+```
+* For example once after submit if we want to redirect to the base or some specific page use the below code
+
+```jsx
+this.props.history.replace('/posts');
+```
+### Guards (only for authenticated Roles)
+* Just redirect in componentDidMount or conditionally apply the component . by this we can restrict the unauth visit.
+### 404 Request Handling
+* Redirect or render some 404 template component.
 
 
 
