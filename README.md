@@ -47,6 +47,17 @@ this.props.history.replace('/posts');
 ### 404 Request Handling
 * Redirect or render some 404 template component.
 
+### Basename in sever deployment
+* it's important to add basename in server deployement, basename is noting if you are running from sub-directory my-app then you need to add that as basename.
+
+```jsx
+<BrowserRouter basename="/my-app">
+    <div>
+        <Blog />
+    </div>
+</BrowserRouter>
+```
+
 
 
 
